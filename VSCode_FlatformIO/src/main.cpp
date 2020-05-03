@@ -1,11 +1,11 @@
 #include <Arduino.h>
 #define BUILTIN_LED 16
-#include <ESP8266WiFi.h>          //https://github.com/esp8266/Arduino
+#include <ESP8266WiFi.h> //https://github.com/esp8266/Arduino
 
 //needed for library
 #include <DNSServer.h>
 #include <ESP8266WebServer.h>
-#include <WiFiManager.h>         //https://github.com/tzapu/WiFiManager
+#include <WiFiManager.h> //https://github.com/tzapu/WiFiManager
 #include <Ticker.h>
 #include <BlynkSimpleEsp8266.h>
 Ticker ticker;
@@ -28,8 +28,8 @@ const int button2 = 0;
 int x, y, z;
 /* Variables Use for shift-out74HC595---------------------------------------------------------*/
 //Default relay1 and relay2 is TRUE. if true, curtain move to center, if false, curtain move out to 2 direction
-bool value1, value2, value3, value4, value5, value6, enable_sensor1, enable_sensor2 ; //6 value to control relay, enable_sensor to consider using sensor to control or not
-int value; //Sum value to shift-out
+bool value1, value2, value3, value4, value5, value6, enable_sensor1, enable_sensor2, timer_rem, enable_timer; //6 value to control relay, enable_sensor to consider using sensor to control or not
+int value;                                                                                                    //Sum value to shift-out
 int latchPin = 14;
 //chân SH_CP(11) của 74HC595
 int clockPin = 12;
@@ -45,7 +45,8 @@ WidgetLCD lcd(V5);
 /* Blynk function prototypes -----------------------------------------------*/
 BLYNK_WRITE(V0)
 {
-  if (param.asInt() == 0) {
+  if (param.asInt() == 0)
+  {
     value1 = 0;
   }
   else
@@ -99,7 +100,8 @@ BLYNK_WRITE(V6)
 {
   if (param.asInt() == 0)
     enable_sensor1 = 0;
-  else {
+  else
+  {
     enable_sensor1 = 1;
     Serial.println("Use light sensor");
   }
@@ -110,9 +112,82 @@ BLYNK_WRITE(V7)
 {
   if (param.asInt() == 0)
     enable_sensor2 = 0;
-  else {
+  else
+  {
     enable_sensor2 = 1;
     Serial.println("Use rain sensor");
+  }
+  // process received value
+}
+
+BLYNK_WRITE(V8) //Timer
+{
+  if (param.asInt() == 0)
+  {
+    timer_rem = 0;
+    Serial.println("Stop");
+    if (1 == enable_timer)
+    {
+      //Open Curtain
+      value1 = 0;
+      value2 = 0;
+      Blynk.virtualWrite(V0, value1);
+      Blynk.virtualWrite(V1, value2);
+      Serial.println("Open Curtain");
+      Blynk.virtualWrite(V0, value1);
+      Blynk.virtualWrite(V1, value2);
+      Blynk.virtualWrite(V2, value3);
+      Blynk.virtualWrite(V3, value4);
+      Blynk.virtualWrite(V4, value5);
+      Blynk.virtualWrite(V5, value6);
+      Blynk.virtualWrite(V6, enable_sensor1);
+      Blynk.virtualWrite(V7, enable_sensor2);
+    }
+  }
+  else
+  {
+    timer_rem = 1;
+    Serial.println("Start");
+    if (1 == enable_timer)
+    {
+      //Close Curtain
+      value1 = 1;
+      value2 = 1;
+      Blynk.virtualWrite(V0, value1);
+      Blynk.virtualWrite(V1, value2);
+      Serial.println("Close Curtain");
+      Blynk.virtualWrite(V0, value1);
+      Blynk.virtualWrite(V1, value2);
+      Blynk.virtualWrite(V2, value3);
+      Blynk.virtualWrite(V3, value4);
+      Blynk.virtualWrite(V4, value5);
+      Blynk.virtualWrite(V5, value6);
+      Blynk.virtualWrite(V6, enable_sensor1);
+      Blynk.virtualWrite(V7, enable_sensor2);
+    }
+  }
+  // process received value
+}
+
+BLYNK_WRITE(V9) //Enable Timer
+{
+  if (param.asInt() == 0)
+  {
+    enable_timer = 0;
+  }
+  else
+  {
+    enable_timer = 1;
+    enable_sensor1 = 0; //Khong su dung 2 cam bien mua
+    enable_sensor2 = 0;
+    Blynk.virtualWrite(V0, value1);
+    Blynk.virtualWrite(V1, value2);
+    Blynk.virtualWrite(V2, value3);
+    Blynk.virtualWrite(V3, value4);
+    Blynk.virtualWrite(V4, value5);
+    Blynk.virtualWrite(V5, value6);
+    Blynk.virtualWrite(V6, enable_sensor1);
+    Blynk.virtualWrite(V7, enable_sensor2);
   }
   // process received value
 }
@@ -120,12 +195,13 @@ BLYNK_WRITE(V7)
 void tick()
 {
   //toggle state
-  int state = digitalRead(BUILTIN_LED);  // get the current state of GPIO1 pin
-  digitalWrite(BUILTIN_LED, !state);     // set pin to the opposite state
+  int state = digitalRead(BUILTIN_LED); // get the current state of GPIO1 pin
+  digitalWrite(BUILTIN_LED, !state);    // set pin to the opposite state
 }
 
 //gets called when WiFiManager enters configuration mode
-void configModeCallback (WiFiManager *myWiFiManager) {
+void configModeCallback(WiFiManager *myWiFiManager)
+{
   Serial.println("Entered config mode");
   Serial.println(WiFi.softAPIP());
   //if you used auto generated SSID, print it
@@ -134,10 +210,11 @@ void configModeCallback (WiFiManager *myWiFiManager) {
   ticker.attach(0.2, tick);
 }
 
-void setup() {
+void setup()
+{
   // put your setup code here, to run once:
   Serial.begin(115200);
-  
+
   //set led pin as output
   pinMode(BUILTIN_LED, OUTPUT);
   // start ticker with 0.5 because we start in AP mode and try to connect
@@ -156,7 +233,8 @@ void setup() {
   //if it does not connect it starts an access point with the specified name
   //here  "AutoConnectAP"
   //and goes into a blocking loop awaiting configuration
-  if (!wifiManager.autoConnect("RemThongMinh","123456789")) {
+  if (!wifiManager.autoConnect("RemThongMinh", "123456789"))
+  {
     Serial.println("failed to connect and hit timeout");
     //reset and try again, or maybe put it to deep sleep
     ESP.reset();
@@ -169,7 +247,7 @@ void setup() {
   //keep LED on
   digitalWrite(BUILTIN_LED, LOW);
   Blynk.config("75ca160b7a4b43a8b5e200e556afcad1", "gith.cf", 8442);
-  pinMode(latchPin , OUTPUT);
+  pinMode(latchPin, OUTPUT);
   pinMode(clockPin, OUTPUT);
   pinMode(dataPin, OUTPUT);
   pinMode(0, INPUT_PULLUP);
@@ -187,14 +265,16 @@ void setup() {
   set_value_blynk_default();
 }
 
-void loop() {
+void loop()
+{
   // put your main code here, to run repeatedly:
   Blynk.run();
   button_processing();
   sensor_processing();
   shiftout_74hc595();
   //blynk_response();
-  if ( (millis() - time1) > 1000 ) {
+  if ((millis() - time1) > 1000)
+  {
     Serial.print("Value1:");
     Serial.print(value1);
     Serial.print("   ");
@@ -222,24 +302,30 @@ void loop() {
     Serial.print("   ");
     Serial.print("Value:");
     Serial.print(value);
+    Serial.print("   ");
+    Serial.print("Timer:");
+    Serial.print(timer_rem);
     Serial.println("   ");
 
     time1 = millis();
-
   }
 }
 
-void sensor_processing() {
+void sensor_processing()
+{
   //  const int light_sensor = 4;
   //  const int rain_sensor = 5;
-  if (enable_sensor1 == 1) { // Using sensor to control or not
-    if (digitalRead(light_sensor) == 1) {  //Enough light, close curtains
+  if (enable_sensor1 == 1)
+  { // Using sensor to control or not
+    if (digitalRead(light_sensor) == 1)
+    { //Enough light, close curtains
       value1 = 0;
       value2 = 0;
       Blynk.virtualWrite(V0, value1);
       Blynk.virtualWrite(V1, value2);
     }
-    else {
+    else
+    {
       value1 = 1;
       value2 = 1;
       Blynk.virtualWrite(V0, value1);
@@ -247,8 +333,10 @@ void sensor_processing() {
     }
   }
 
-  if (enable_sensor2 == 1) { // Using sensor to control or not
-    if (digitalRead(rain_sensor) == 0) {  //If rain, close curtain
+  if (enable_sensor2 == 1)
+  { // Using sensor to control or not
+    if (digitalRead(rain_sensor) == 0)
+    { //If rain, close curtain
       value1 = 1;
       value2 = 1;
       Blynk.virtualWrite(V0, value1);
@@ -257,14 +345,15 @@ void sensor_processing() {
   }
 }
 
-
-void button_processing() {
+void button_processing()
+{
   /*-----------------*/ // Relay and button 1
   if (digitalRead(button1) == 1)
     a = 0;
   if (digitalRead(button1) == 0)
     a++;
-  if (a == 10 ) {
+  if (a == 10)
+  {
     value1 = 1;
     value2 = 1;
     Blynk.virtualWrite(V0, value1);
@@ -278,39 +367,18 @@ void button_processing() {
     b = 0;
   if (digitalRead(button2) == 0)
     b++;
-  if (b == 10 ) {
+  if (b == 10)
+  {
     value1 = 0;
     value2 = 0;
     Blynk.virtualWrite(V0, value1);
     Blynk.virtualWrite(V1, value2);
   }
   //////////
-
-  //  /*-----------------*/ // Relay and button 3
-  //  if (digitalRead(button3) == 1)
-  //    c = 0;
-  //  if (digitalRead(button3) == 0)
-  //    c++;
-  //  if (c == 10 ) {
-  //    value3 = !value3;
-  //    Blynk.virtualWrite(V3, value3);
-  //  }
-  //
-  //  //////////
-  //
-  //  /*-----------------*/ // Relay and button 4
-  //  if (digitalRead(button4) == 1)
-  //    d = 0;
-  //  if (digitalRead(button4) == 0)
-  //    d++;
-  //  if (d == 10 ) {
-  //    value4 = !value4;
-  //    Blynk.virtualWrite(V4, value4);
-  //  }
-
 }
 
-void shiftout_74hc595(void) {
+void shiftout_74hc595(void)
+{
   value = value1 * 2 + value2 * 4 + value3 * 8 + value4 * 16 + value5 * 32 + value6 * 64;
   digitalWrite(latchPin, LOW);
   shiftOut(dataPin, clockPin, MSBFIRST, value);
@@ -318,12 +386,12 @@ void shiftout_74hc595(void) {
   digitalWrite(latchPin, HIGH);
 }
 
-void blynk_response() {
-
-
+void blynk_response()
+{
 }
 
-void set_value_blynk_default() { //Sen default data to Blynk
+void set_value_blynk_default()
+{ //Sen default data to Blynk
   Blynk.virtualWrite(V0, value1);
   Blynk.virtualWrite(V1, value2);
   Blynk.virtualWrite(V2, value3);
